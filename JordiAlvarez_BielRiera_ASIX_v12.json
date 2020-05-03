@@ -31,7 +31,6 @@
         "sopar":{"actiu":true,"preu":"15","valor":"eur"},
         "idioma":{"castella":true,"angles":true,"aleman":true,"rus":false},
         "fumador":"si",
-        "imatge": "https://github.com/biela5/LLMJSON/blob/master/bitch.GIF",
         "reciclatge":"no",
         "guarderia":"no",
         "imatge":"https://raw.githubusercontent.com/biela5/LLMJSON/master/playa.GIF,l",
@@ -495,7 +494,7 @@
        "fumador":"si",
        "reciclatge":"si",
        "guarderia":"si",
-       "imatge":"https://raw.githubusercontent.com/biela5/LLMJSON/master/bitch.GIF",
+       "imatge":"https://raw.githubusercontent.com/biela5/LLMJSON/master/solimar.GIF",
        "descripcio":"L'Hotel Royal Bitch és un hotel ubicat al carrer BitchesAll, 40. Es troba a al mateix centre de la ciutat: Bitch City. Està ben comunicat amb la platja que té servei de bitches tot lo dia. Teniu professora de tenis que està molt bona i també vos ensenya a fer cucaveles dins la piscina. Tenim servei de guarderia i l'únic problema és que les guardadores fumen com a carreteres.       Tenim servei de reciclatge de bicicletes espenyades, ja que les arreglam i les llogam per 20€ als nostres clients. Podeu dinar per 18 € , sopar per 25 € i berenar per 15 €, però no el vos recomanam perquè és pesta.",
        "habitacions":[{
                         "id":0,
