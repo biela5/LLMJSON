@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Disponibilitat. CIFP Hotels. La web més cutre de reserves d'hotels.</title>
+    <script>
+        //Llita dels hotels carregats del Json
+        var llistatHotels;
+        //Llita dels hotels resultat de la cerca
+        var llistatHotelsSeleccionats;
+        //Llita dels hotels resultat de la cerca i filtres
+        var llistatHotelsSeleccionatsFiltrats;
+        //llista d'habitacions seleccionades.Que necessitarem per calcular el preu total
+        var llistaHabitacionsSeleccionades;
+
+        //Funció per carregar Json
+        function loadJSON(callback) {
+            let xobj = new XMLHttpRequest();
+            xobj.overrideMimeType("application/json");
+            //Molt alerta! si la url es un fitxer local no ens funcionarà sense canviar els permisos del navegador. Per aquest motiu ho he pujat a un fitxer de gitHub.
+            xobj.open('GET', 'https://raw.githubusercontent.com/biela5/LLMJSON/master/JordiAlvarez_BielRiera_ASIX_v14.json', true);
+            xobj.onreadystatechange = function () {
+                if (xobj.readyState == 4 && xobj.status == "200") {
+                    callback(xobj.responseText);
+                }
+            };
+            xobj.send(null);
+        }
+
+        //Functio per defecte per carregar el Json.
+        function init() {
+            loadJSON(function (response) {
+                // Parse JSON string into object
+                llistatHotels = JSON.parse(response);
+            });
+        }
+
+        //Borram tots els resultats d'una cerca anterior.
+        function borrarResultatsAnteriors() {
+            document.getElementById("resultats").innerHTML = "";
+        }
+
+        //Desmarcam tots els filtres del lateral.
+        function desmarcarTotsElsFiltresDelLateral() {
+            //Seleccionam tots els filtre per la classe.
+            var filtres = document.getElementsByClassName("filtre");
+            for(filtre of filtres) {
+                filtre.checked = false;
+            }
+        }
+
+        //Per mostrar el div de més info.
+        function mostrarElement(elementActual) {
+            /*
+             <div>
+                <a href="mostrarElement()">Més informació</a>
+                <div class="mesInfo">Mostrariem més informació</div>
+             </div>
+            */
+            //Cercarem l'element sense id. Cercarem per classe de l'element pare
+            var llistaElements = elementActual.parentElement.getElementsByClassName("mesInfo");
+            //la llista d'elements ha de ser 1.
+            llistaElements[0].style.display = "block";
+        }
+
+        //Quan cliquen al botó de carcam. Executam aquesta funció.
+        function realitzarcerca() {
+            //Si ja hem fet alguna cerca, ocultam els resultats anteriors.
+            borrarResultatsAnteriors();
+            //Camps de la cerca
+            var temporadaAlta = false;
+            var numIndividual = 0;
+            var numDoble = 0;
+            temporadaAlta = (getValorRadio("temporada") == "alta");
+            numIndividual = document.getElementById("individual").value;
+            numDoble = document.getElementById("doble").value;
+            numLlitera = document.getElementById("llitera").value;
+
+            //Quan feim una nova cerca, desmarcam tots els filtres seleccionats del lateral.
+            desmarcarTotsElsFiltresDelLateral();
+
+            llistatHotelsSeleccionats = new Array();
+            //Per cada hotel que tenim a la llista
+            for (objHotel of llistatHotels.hotels) {
+                for (objHab of objHotel.habitacions) {
+            //Comprovarem el filtre de llists. Si concorden els llits de l'habitació cercarem pels altres filtres.
+                    if ((objHab.llits.individuals == numIndividual) && (objHab.llits.dobles == numDoble) &&(objHab.llits.Lliteres == numLlitera)) {
+                        var preuMesBaix;
+                        for (objPreu of objHab.preus) {
+                        //Comparam pel valor de temporada alta. Si també coincideix. Mostrarem el resultat.
+                            if (objPreu.tempAlta == temporadaAlta) {
+                                if (preuMesBaix == null) {
+                                    preuMesBaix = objPreu
+                                } else {
+                                    if (objPreu.preuTotal < preuMesBaix.preuTotal) {
+                                        preuMesBaix = objPreu;
+                                    }
+                                }
+                            }
+                        }
+                        if (preuMesBaix != null) {
+                            var objCerca = new Object();
+                            objCerca.hotel = objHotel;
+                            objCerca.hab = objHab;
+                            objCerca.preu = preuMesBaix;
+                            //Guardarem dins una llista les dades bàsiques per identificar l'hotel, habitació i preu.
+                            llistatHotelsSeleccionats.push(objCerca);                            
+                            pintarInformacioHotelHabPreu(objCerca);
+                        }
+                    }else{
+                       // alert("selecciona alguna habitació");
+
+                    }
+                }
+            }
+        }
+        
+        function aplicarFiltres() {
+            /*
+             var objCerca = new Object();
+            objCerca.hotel = objHotel;
+            objCerca.hab = objHab;
+            objCerca.preu = objPreu;
+            */
+            //Si la cerca no te resultats, no fa falta filtrar res.
+            if (llistatHotelsSeleccionats != null && llistatHotelsSeleccionats.length > 0) {
+                //Revisarem la llista de checksbox que tenim
+
+                llistatHotelsSeleccionatsFiltrats = llistatHotelsSeleccionats;
+                var llistaAuxiliar;
+                for (oFiltre of document.getElementsByClassName("filtre")) {
+                //Revisarem els que estan marcats.
+                    if (oFiltre.checked) {
+                        switch (oFiltre.id) {
+                            case "filterGym":
+                                //Com a l'exemple no tenc gym he fet un filtre damunt el nom. Per treure l'hotel Prova 3. Això només és per mostrar-vos un exemple.
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                    llistaAuxiliar = new Array();
+                                    for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                        //console.log(hotelSeleccionat.hotel.extres[1]);
+                                        if (hotelSeleccionat.hotel.extres.gimnas == true) {
+                                            llistaAuxiliar.push(hotelSeleccionat);
+                                            
+                                        }
+                                    }
+                                    llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                    
+                                }
+
+                                break;
+                            case "filterPiscina":
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                     llistaAuxiliar = new Array();
+                                     for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                         if (hotelSeleccionat.hotel.extres.piscina == true) {
+                                             llistaAuxiliar.push(hotelSeleccionat);
+                                         }
+                                     }
+                                     llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                 }
+                                break;
+                                case "filterSpa":
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                     llistaAuxiliar = new Array();
+                                     for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                         if (hotelSeleccionat.hotel.extres.spa == true) {
+                                             llistaAuxiliar.push(hotelSeleccionat);
+                                         }
+                                     }
+                                     llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                 }
+                                break;
+                                case "filterTenis":
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                     llistaAuxiliar = new Array();
+                                     for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                         if (hotelSeleccionat.hotel.extres.tenis == true) {
+                                             llistaAuxiliar.push(hotelSeleccionat);
+                                         }
+                                     }
+                                     llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                 }
+                                break;
+                                case "filterBerenar":
+                                //Com a l'exemple no tenc gym he fet un filtre damunt el nom. Per treure l'hotel Prova 3. Això només és per mostrar-vos un exemple.
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                    llistaAuxiliar = new Array();
+                                    for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                        //console.log(hotelSeleccionat.hotel.extres[1]);
+                                        if (hotelSeleccionat.hotel.berenar.actiu == true) {
+                                            llistaAuxiliar.push(hotelSeleccionat);
+                                            
+                                        }
+                                    }
+                                    llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                    
+                                }
+                                break;
+                                case "filterDinar":
+                                //Com a l'exemple no tenc gym he fet un filtre damunt el nom. Per treure l'hotel Prova 3. Això només és per mostrar-vos un exemple.
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                    llistaAuxiliar = new Array();
+                                    for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                        //console.log(hotelSeleccionat.hotel.extres[1]);
+                                        if (hotelSeleccionat.hotel.dinar.actiu == true) {
+                                            llistaAuxiliar.push(hotelSeleccionat);
+                                            
+                                        }
+                                    }
+                                    llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                    
+                                }
+                                break;
+                                case "filterSopar":
+                                //Com a l'exemple no tenc gym he fet un filtre damunt el nom. Per treure l'hotel Prova 3. Això només és per mostrar-vos un exemple.
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                    llistaAuxiliar = new Array();
+                                    for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                        //console.log(hotelSeleccionat.hotel.extres[1]);
+                                        if (hotelSeleccionat.hotel.sopar.actiu == true) {
+                                            llistaAuxiliar.push(hotelSeleccionat);
+                                            
+                                        }
+                                    }
+                                    llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                    
+                                }
+                                break;
+                                case "filterRus":
+                                //Com a l'exemple no tenc gym he fet un filtre damunt el nom. Per treure l'hotel Prova 3. Això només és per mostrar-vos un exemple.
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                    llistaAuxiliar = new Array();
+                                    for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                        //console.log(hotelSeleccionat.hotel.extres[1]);
+                                        if (hotelSeleccionat.hotel.idioma.rus == true) {
+                                            llistaAuxiliar.push(hotelSeleccionat);
+                                            
+                                        }
+                                    }
+                                    llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                    
+                                }
+                                break;
+                                case "filterCastella":
+                                //Com a l'exemple no tenc gym he fet un filtre damunt el nom. Per treure l'hotel Prova 3. Això només és per mostrar-vos un exemple.
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                    llistaAuxiliar = new Array();
+                                    for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                        //console.log(hotelSeleccionat.hotel.extres[1]);
+                                        if (hotelSeleccionat.hotel.idioma.castella == true) {
+                                            llistaAuxiliar.push(hotelSeleccionat);
+                                            
+                                        }
+                                    }
+                                    llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                    
+                                }
+                                break;
+                                case "filterAngles":
+                                //Com a l'exemple no tenc gym he fet un filtre damunt el nom. Per treure l'hotel Prova 3. Això només és per mostrar-vos un exemple.
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                    llistaAuxiliar = new Array();
+                                    for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                        //console.log(hotelSeleccionat.hotel.extres[1]);
+                                        if (hotelSeleccionat.hotel.idioma.angles == true) {
+                                            llistaAuxiliar.push(hotelSeleccionat);
+                                            
+                                        }
+                                    }
+                                    llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                    
+                                }
+                                break;
+                                case "filterAleman":
+                                //Com a l'exemple no tenc gym he fet un filtre damunt el nom. Per treure l'hotel Prova 3. Això només és per mostrar-vos un exemple.
+                                if (llistatHotelsSeleccionatsFiltrats.length > 0) {
+                                    llistaAuxiliar = new Array();
+                                    for (hotelSeleccionat of llistatHotelsSeleccionatsFiltrats) {
+                                        //console.log(hotelSeleccionat.hotel.extres[1]);
+                                        if (hotelSeleccionat.hotel.idioma.aleman == true) {
+                                            llistaAuxiliar.push(hotelSeleccionat);
+                                            
+                                        }
+                                    }
+                                    llistatHotelsSeleccionatsFiltrats = llistaAuxiliar;
+                                    
+                                }
+                                break;
+                            default:
+
+                        }
+                    }
+                }
+
+                borrarResultatsAnteriors();
+                for (objCerca of llistatHotelsSeleccionatsFiltrats) {
+                    pintarInformacioHotelHabPreu(objCerca);
+                }
+
+            }
+        }
+
+        //Pintar la informació al Html.
+        //Del hotel no hem de consultar les habitacions, ja que la seleccionada la tenim com a parametre.
+        //De la habitacio  no hem de consultar els  preus, ja que el seleccionat el tenim com parametre.
+        function pintarInformacioHotelHabPreu(objInformacioElement) {
+            /*
+            var objCerca = new Object();
+            objCerca.hotel = objHotel;
+            objCerca.hab = objHab;
+            objCerca.preu = objPreu;
+            */
+            var StrHtml = "<div class=\"habitacio\">";
+            StrHtml += "<div class=\"imatgeHab\">";
+            StrHtml += "<img class=\"imgMiniHab\" src=\"playa.GIF\" />" ;
+            StrHtml += "</div>";
+            StrHtml += "<div class=\"infoHab\">";
+            StrHtml += "<h3 class=\"titolHotel\">" + objInformacioElement.hotel.nom + "</h3><div class=\"estrelles\">Estrelles: " + objInformacioElement.hotel.estrelles + "</div>";
+            StrHtml += "<div class=\"hotelDescripcio\">";
+            StrHtml += objInformacioElement.hotel.descripcio;
+            StrHtml += "</div>";
+            StrHtml += "</div>";
+            StrHtml += "<div class=\"preuHab\">";
+            StrHtml += "<div>Preu " + objInformacioElement.preu.preuNet + " " + objInformacioElement.preu.moneda + "</div>";
+            StrHtml += "<div>Impostos " + objInformacioElement.preu.impostosPerc + "% </div>";
+            StrHtml += "<div>Preu Total " + objInformacioElement.preu.preuTotal + " </div>";
+            StrHtml += "</div>";
+            StrHtml += "<div class=\"informacioExtesa\">";
+            StrHtml += "<p onclick=\"mostrarElement(this)\">Més informació</p>";
+            StrHtml += "<div class=\"mesInfo\"> Direcció: " + objInformacioElement.hotel.adresa + "<br> Tel.: "+objInformacioElement.hotel.telefon + "<br> Email: " + objInformacioElement.hotel.correu +"</div>";
+            StrHtml += "</div>";
+            StrHtml += "<div class=\"seleccionar\">";
+            StrHtml += "<label>Quantitat:</label>";
+            StrHtml += "<input type=\"number\" id=\"" + objInformacioElement.hotel.id + "_" + objInformacioElement.hab.id + "_" + objInformacioElement.preu.tempAlta + "_" + objInformacioElement.preu.idAgregador + "\" />";
+            StrHtml += "<button type=\"button\" onclick=\"seleccionarHabitacio(" + objInformacioElement.hotel.id + "," + objInformacioElement.hab.id + "," + objInformacioElement.preu.tempAlta + ",'" + objInformacioElement.preu.idAgregador + "'," + objInformacioElement.preu.preuTotal + ")\" >Seleccionar. </button>";
+            StrHtml += "</div>";
+            StrHtml += "</div>";
+            StrHtml += "";
+
+            document.getElementById("resultats").innerHTML += StrHtml;
+        }
+
+        function seleccionarHabitacio(hotelId, habId, tempAlta, preuProv, preuValor) {
+
+            //Si la llista no esta inicialitzada la inicialitzam;
+            if (llistaHabitacionsSeleccionades == null) {
+                llistaHabitacionsSeleccionades = new Array();
+            }
+
+            var valorActual = parseFloat(document.getElementById("preuValor").innerText);
+            var numHabActual = parseInt(document.getElementById("numHabitacions").innerText);
+
+            var numHabSeleccionades = parseInt(document.getElementById(hotelId + "_" + habId + "_" + tempAlta + "_" + preuProv).value);
+
+            if (numHabSeleccionades > 0) {
+                document.getElementById("numHabitacions").innerText = numHabActual + numHabSeleccionades;
+                document.getElementById("preuValor").innerText = valorActual + (preuValor * numHabSeleccionades);
+
+                var habitacioSeleccionada = new Object();
+                habitacioSeleccionada.hotelId = hotelId;
+                habitacioSeleccionada.habId = habId;
+                habitacioSeleccionada.tempAlta = tempAlta;
+                habitacioSeleccionada.preuProv = preuProv;
+                habitacioSeleccionada.numHabSeleccionades = numHabSeleccionades;
+                llistaHabitacionsSeleccionades.push(habitacioSeleccionada);
+
+            } else {
+                alert("Selecciona alguna habitació");
+            }
+        }
+
+        /**************
+        Funció genèrica per recuperar valors d'un radiobutton.
+        nomRadio es el name del radio <input type="radio" name="aquest nom" id="id" />
+        *********/
+        function getValorRadio(nomRadio) {
+            //obtenim la llista de inputs que tenen el mateix nom
+            var radios = document.getElementsByName(nomRadio);
+            //recorrem els inputs amb el mateix nom per recuperar el valor del seleccionat.
+            for (radio of radios) {
+            //si el radio està activat
+                if (radio.checked) {
+                    //retornam el seu valor
+                    return radio.value;
+                }
+            }
+            //En cas de no haver cap activat retornam "";
+            return "";
+        }
+
+        function continuar() {
+            if (llistaHabitacionsSeleccionades == null || llistaHabitacionsSeleccionades.length == 0) {
+                alert("No hi ha cap habitació seleccionada");
+            } else {
+                var jsonString = JSON.stringify(llistaHabitacionsSeleccionades);
+                document.getElementById("parJson").value = jsonString;
+                document.getElementById("dispo").submit();
+            }
+        }
+
+    </script>
+    <style>
+        body{
+            margin:auto;
+            width: 100%;
+            background-color: whitesmoke;
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+        header {
+            background-color: lightyellow;
+            padding: 10px;
+            margin: 5px;
+            /*Com tenim dins floats. Això ens va bé per obligar a que els elements interns estiguin dins aquest contenidor.*/
+            overflow: hidden;
+        }
+    
+        aside {
+            background-color: white;
+            padding: 10px;
+            margin: 5px;
+            float: left;
+            width: 18%;
+        }
+    
+        main {
+            padding: 10px;
+            margin: 5px;
+            float: left;
+            width: 75%;
+        }
+    
+        footer {
+            padding: 10px;
+            margin: 5px;
+            clear: left;
+        }
+    
+        button {
+            margin-left: 10px;
+        }
+    
+        #JsonText {
+            margin: 10px;
+        }
+    
+        #modificar {
+            display: none;
+        }
+    
+        .elementHabitacio {
+            margin-bottom: 10px;
+        }
+    
+        li {
+            margin-bottom: 10px;
+        }
+    
+        #logoWeb {
+            float: left;
+        }
+    
+        #headerOptions {
+            float: right;
+        }
+    
+        #headerOptions a {
+                margin-left: 20px;
+            }
+    
+        #logoWeb img {
+            width: 150px;
+        }
+    
+        nav a {
+            margin: 10px;
+        }
+    
+        #cercador div {
+            margin-bottom: 10px;
+            width:100%
+        }
+    
+        .mesInfo {
+            display: none;
+        }
+    
+        .imgMiniHab {
+            width:100px;
+        }
+        .habitacio{overflow:hidden;width:840px;}
+        .imatgeHab,.infoHab,.preuHab{float:left;overflow:hidden;border:1px solid lightgray; padding:10px;}
+        .imatgeHab{width:110px;}
+        .infoHab{width:480px;}
+        .preuHab{width:120px;}
+        .informacioExtesa{width:800px;clear:left;background-color: white; padding:10px;margin: 5px;text-align:right;}
+        .titolHotel{margin:0px; float:left;}
+        .hotelDescripcio{clear:both;}
+        .estrelles{margin: 2px 0 0 10px; float:left} 
+        .seleccionar{text-align:right;margin-right:10px}
+        #preu{width:150px;overflow:hidden; float:left;background-color: linen;
+    }
+        #resultats{float:left;width:83%}
+        input{
+            border-radius: 25px;
+        }
+       </style>
+</head>
+<body onload="init();">
+    <form id="dispo" action="cotitzacio.html" method="get">
+        <input type="hidden" name="parJson" id="parJson" value="" />
+    </form>
+    <header id="head">
+        <!--**Aqui posar la imatge del vostre logo**-->
+        <div id="logoWeb">
+            <img src="imatge.GIF" />
+        </div>
+        <div id="headerOptions">
+            <a href="">Login</a>
+            <a href="">Canviar idioma</a>
+        </div>
+    </header>
+    <nav>
+        <a href="">Hotels</a><a href="">Vols</a><a href="">Creuers</a><a href="">Paquets vacacionals</a>
+    </nav>
+    <aside>
+        <h2>Filtres:</h2>
+        <ul id="llistaFiltres">
+            <li>
+                Serveis:
+                <ul>
+                    <li>
+                        Gimnàs <input type="checkbox" class="filtre" id="filterGym" onclick="aplicarFiltres();" />
+                    </li>
+                    <li>
+                        Piscina<input type="checkbox" class="filtre" id="filterPiscina" onclick="aplicarFiltres();" />
+                    </li>
+                    <li>
+                        Spa<input type="checkbox" class="filtre" id="filterSpa" onclick="aplicarFiltres();" />
+                    </li>
+                    <li>
+                        Tenis<input type="checkbox" class="filtre" id="filterTenis" onclick="aplicarFiltres();" />
+                    </li>
+                </ul>
+            </li>
+            <li>
+                Menjars:
+                <ul>
+                    <li>
+                        Berenar<input type="checkbox" class="filtre" id="filterBerenar" onclick="aplicarFiltres();" />
+                    </li>
+                    <li>
+                        Dinar<input type="checkbox" class="filtre" id="filterDinar" onclick="aplicarFiltres();" />
+                    </li>
+                    <li>
+                        Sopar<input type="checkbox" class="filtre" id="filterSopar" onclick="aplicarFiltres();" />
+                    </li>
+                </ul>
+            </li>
+            <li>
+                Idioma:
+                <ul>
+                    <li>
+                        Castellà<input type="checkbox" class="filtre" id="filterCastella" onclick="aplicarFiltres();" />
+                    </li>
+                    <li>
+                        Ángles<input type="checkbox" class="filtre" id="filterAngles" onclick="aplicarFiltres();" />
+                    </li>
+                    <li>
+                        Aleman<input type="checkbox" class="filtre" id="filterAleman" onclick="aplicarFiltres();" />
+                    </li>
+                    <li>
+                        Rus<input type="checkbox" class="filtre" id="filterRus" onclick="aplicarFiltres();" />
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </aside>
+    <main>
+        <fieldset id="cercador">
+            <legend>Cercador hotels:</legend>
+            <div>
+                <label>Temporada:</label>
+                <label>Baixa</label><input type="radio" name="temporada" id="baixa" value="baixa" />
+                <label>Alta</label><input type="radio" name="temporada" id="alta" value="alta" checked />
+            </div>
+            <div>
+                <label>Habitacions:</label>
+                <label>Individuals:</label>
+                <input type="number" id="individual" min="0"/>
+                <label>Dobles:</label>
+                <input type="number" id="doble" min="0"/>
+                <label>Lliteres:</label>
+                <input type="number" id="llitera" min="0"/>
+            </div>
+            <div>
+                <button id="cerca" type="button" onclick="realitzarcerca();">Cerca</button>
+            </div>
+        </fieldset>
+        <div id="resultats">
+            -
+        </div>
+        <div id="preu">
+            <h3>Preu Total:</h3>
+            <div><label id="preuValor">0</label><label id="preuMoneda"></label></div>
+            <div>Seleccio:</div>
+            <div>Habitacions:<label id="numHabitacions">0</label> </div>
+            <button id="continuar" type="button" onclick="continuar();">continuar</button>
+        </div>
+    </main>
+    <footer id="peu">
+        <!--Els peus a intranets no són molt necessàris. Podeu possar-hi El nom de l'empresa + versió de la pàgina -->
+        Una mostra realitzada per Gabriel Riera Mas i Jordi Ramón Álvarez Rebassa
+    </footer>
+</body>
+</html>
